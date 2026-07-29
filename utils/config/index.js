@@ -18,4 +18,18 @@ exports.config = {
   redis_url : process.env.REDIS_URL || "",
   redis_password : process.env.REDIS_PASSWORD || "Tt82r7C8VGQ2B6JyrnmNVzb7AJNhC57A",
 
+  // AI assistant (Anthropic Claude + Pinecone RAG)
+  anthropic_api_key : process.env.ANTHROPIC_API_KEY || "",
+  pinecone_api_key : process.env.PINECONE_API_KEY || "",
+  pinecone_index_name : process.env.PINECONE_INDEX_NAME || "platform-knowledge-base",
+  pinecone_cloud : process.env.PINECONE_CLOUD || "aws",
+  pinecone_region : process.env.PINECONE_REGION || "us-east-1",
+  ai_model : process.env.AI_MODEL || "claude-sonnet-4-6",
+  ai_max_tokens : parseInt(process.env.AI_MAX_TOKENS) || 1024,
+  ai_chat_history_ttl : parseInt(process.env.AI_CHAT_HISTORY_TTL) || 86400,
+  ai_chat_history_max_turns : parseInt(process.env.AI_CHAT_HISTORY_MAX_TURNS) || 20,
+  ai_max_sessions : parseInt(process.env.AI_MAX_SESSIONS) || 5,
+  ai_rate_limit_max : parseInt(process.env.AI_RATE_LIMIT_MAX) || 30,
+  ai_rate_limit_window_seconds : parseInt(process.env.AI_RATE_LIMIT_WINDOW_SECONDS) || 3600,
+
 };

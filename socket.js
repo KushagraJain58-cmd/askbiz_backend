@@ -171,7 +171,7 @@ const socketUtiles = (io, socket) => {
   if (userId) {
     io.emit('online-user', { userId, online: true });
 
-    redisClient.hSet("onlineUsers", userId, socket.id);
+    redisClient.hset("onlineUsers", userId, socket.id);
   }
 
   socket.on('joinRoom', async ({ roomId }) => {
@@ -304,7 +304,7 @@ const socketUtiles = (io, socket) => {
       }
 
       for (const participantId of otherParticipants) {
-        const participantSocketId = await redisClient.hGet("onlineUsers", participantId.toString());
+        const participantSocketId = await redisClient.hget("onlineUsers", participantId.toString());
         if (participantSocketId) {
           io.to(participantSocketId).emit('unseen-messages', {
             roomId,
@@ -385,7 +385,7 @@ const socketUtiles = (io, socket) => {
         { $set: { isRead: true } }
       );
 
-      const userSocketId = await redisClient.hGet("onlineUsers", userId.toString());
+      const userSocketId = await redisClient.hget("onlineUsers", userId.toString());
 
       io.to(userSocketId).emit('mark-notification-read-response', { message: "All notifications have been marked as read.", userId: userId, hasUnread: false });
 
@@ -436,9 +436,9 @@ const socketUtiles = (io, socket) => {
       return;
     }
 
-    const isOnline = await redisClient.hExists("onlineUsers", userId.toString());
+    const isOnline = await redisClient.hexists("onlineUsers", userId.toString());
 
-    const lastActive = await redisClient.hGet("lastActiveUsers", userId);
+    const lastActive = await redisClient.hget("lastActiveUsers", userId);
 
     let loggedInUser = await User.findById(socket.data.userId).select('blockedUsers').lean();
 
@@ -480,10 +480,10 @@ const socketUtiles = (io, socket) => {
     console.log('Socket disconnected:', socket.data.userId);
 
     if (socket.data.userId) {
-      await redisClient.hDel("onlineUsers", socket.data.userId);
+      await redisClient.hdel("onlineUsers", socket.data.userId);
 
       const lastActiveTime = new Date().toISOString();
-      await redisClient.hSet("lastActiveUsers", socket.data.userId, lastActiveTime);
+      await redisClient.hset("lastActiveUsers", socket.data.userId, lastActiveTime);
 
       io.emit('online-user', {
         userId: socket.data.userId,
