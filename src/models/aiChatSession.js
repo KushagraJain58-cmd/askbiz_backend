@@ -40,12 +40,19 @@ let messageSchema = new Schema({
     }
 });
 
+// One document = one conversation (like a Claude chat). A user may hold up to
+// MAX_SESSIONS_PER_USER of these; the oldest is dropped when the cap is hit.
 let aiChatSessionSchema = new Schema({
     userId: {
         type: Schema.Types.ObjectId,
         ref: 'user',
         required: true,
         index: true
+    },
+    // Derived from the first user message, shown in the sidebar
+    title: {
+        type: String,
+        default: 'New chat'
     },
     messages: [messageSchema],
     lastActive: {

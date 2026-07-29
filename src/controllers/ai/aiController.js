@@ -2,40 +2,114 @@ let AIChatSession = require('../../models/aiChatSession');
 let KnowledgeChunk = require('../../models/knowledgeChunk');
 let AIQueryLog = require('../../models/aiQueryLog');
 let { ingestChunk } = require('../../services/ai/ragService');
-let { clearHistory } = require('../../services/ai/chatHistoryService');
+let {
+    clearHistory,
+    listSessions,
+    createSession,
+    deleteSession,
+    renameSession,
+    findOwnedSession,
+    MAX_SESSIONS,
+} = require('../../services/ai/chatHistoryService');
 let response = require('../../../utils/constants/responseFunctions');
 let statusCode = require('../../../utils/constants/responseCodes');
 let { catchAsyncError } = require('../../../utils/constants/generateError');
 
 /**
- * GET /api/v1/ai/history
- * Returns the user's persisted AI chat history.
+ * GET /api/v1/ai/sessions
+ * Lists the user's chat sessions for the sidebar (most recent first).
  */
-exports.getHistory = catchAsyncError(async (req, res) => {
-    const session = await AIChatSession.findOne({ userId: req.user.id })
-        .select('messages lastActive totalQueries')
-        .lean();
+exports.getSessions = catchAsyncError(async (req, res) => {
+    const sessions = await listSessions(req.user.id.toString());
+
+    return response.responseHandlerWithData(res, true, statusCode.SUCCESS, "AI chat sessions fetched successfully!", {
+        sessions,
+        maxSessions: MAX_SESSIONS,
+    });
+});
+
+/**
+ * POST /api/v1/ai/sessions
+ * Starts a new chat. If the user is already at the session cap, the least
+ * recently active session is permanently removed (Mongo + Redis).
+ */
+exports.createChatSession = catchAsyncError(async (req, res) => {
+    const session = await createSession(req.user.id.toString());
+
+    return response.responseHandlerWithData(res, true, statusCode.CREATED, "New chat started!", { session });
+});
+
+/**
+ * GET /api/v1/ai/sessions/:sessionId
+ * Returns the messages of ONE session, including the entity cards that were
+ * attached to each assistant reply.
+ */
+exports.getSessionMessages = catchAsyncError(async (req, res) => {
+    const session = await findOwnedSession(
+        req.user.id.toString(),
+        req.params.sessionId,
+        'messages title lastActive totalQueries'
+    );
 
     if (!session) {
-        return response.responseHandlerWithData(res, true, statusCode.SUCCESS, "AI chat history fetched successfully!", {
-            messages: [],
-            totalQueries: 0,
-        });
+        return response.responseHandlerWithMessage(res, false, statusCode.RESULTNOTFOUND, "Chat not found!");
     }
 
     return response.responseHandlerWithData(res, true, statusCode.SUCCESS, "AI chat history fetched successfully!", {
-        messages: session.messages.slice(-50),
+        sessionId: session._id.toString(),
+        title: session.title,
+        messages: (session.messages || []).slice(-50),
         totalQueries: session.totalQueries,
         lastActive: session.lastActive,
     });
 });
 
 /**
- * DELETE /api/v1/ai/history
- * Clears the user's chat history from both Redis and MongoDB.
+ * PATCH /api/v1/ai/sessions/:sessionId
+ * Manually renames a chat. Overrides the auto-derived title going forward.
+ */
+exports.renameChatSession = catchAsyncError(async (req, res) => {
+    const { title } = req.body;
+
+    if (!title || !String(title).trim()) {
+        return response.responseHandlerWithMessage(res, false, statusCode.DATAMISSING, "Title cannot be empty!");
+    }
+
+    const updated = await renameSession(req.user.id.toString(), req.params.sessionId, title);
+
+    if (!updated) {
+        return response.responseHandlerWithMessage(res, false, statusCode.RESULTNOTFOUND, "Chat not found!");
+    }
+
+    return response.responseHandlerWithData(res, true, statusCode.SUCCESS, "Chat renamed successfully!", { session: updated });
+});
+
+/**
+ * DELETE /api/v1/ai/sessions/:sessionId
+ * Permanently deletes one session everywhere — Mongo document and Redis cache.
+ */
+exports.deleteChatSession = catchAsyncError(async (req, res) => {
+    const removed = await deleteSession(req.user.id.toString(), req.params.sessionId);
+
+    if (!removed) {
+        return response.responseHandlerWithMessage(res, false, statusCode.RESULTNOTFOUND, "Chat not found!");
+    }
+
+    return response.responseHandlerWithMessage(res, true, statusCode.SUCCESS, "Chat deleted successfully!");
+});
+
+/**
+ * DELETE /api/v1/ai/sessions/:sessionId/messages
+ * Empties one session's messages but keeps the session itself.
  */
 exports.clearHistory = catchAsyncError(async (req, res) => {
-    await clearHistory(req.user.id.toString(), true);
+    const session = await findOwnedSession(req.user.id.toString(), req.params.sessionId, '_id');
+
+    if (!session) {
+        return response.responseHandlerWithMessage(res, false, statusCode.RESULTNOTFOUND, "Chat not found!");
+    }
+
+    await clearHistory(req.user.id.toString(), req.params.sessionId, true);
     return response.responseHandlerWithMessage(res, true, statusCode.SUCCESS, "AI chat history cleared successfully!");
 });
 

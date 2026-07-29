@@ -7,9 +7,15 @@ const aiController = require("../controllers/ai/aiController");
 
 let aiRouter = express.Router();
 
-// User routes
-aiRouter.get('/history', verifyToken, verifyUser, aiController.getHistory);
-aiRouter.delete('/history', verifyToken, verifyUser, aiController.clearHistory);
+// Chat sessions (Claude-style multiple conversations)
+aiRouter.get('/sessions', verifyToken, verifyUser, aiController.getSessions);
+aiRouter.post('/sessions', verifyToken, verifyUser, aiController.createChatSession);
+aiRouter.get('/sessions/:sessionId', verifyToken, verifyUser, aiController.getSessionMessages);
+aiRouter.patch('/sessions/:sessionId', verifyToken, verifyUser, aiController.renameChatSession);
+aiRouter.delete('/sessions/:sessionId', verifyToken, verifyUser, aiController.deleteChatSession);
+aiRouter.delete('/sessions/:sessionId/messages', verifyToken, verifyUser, aiController.clearHistory);
+
+// Feedback
 aiRouter.post('/feedback', verifyToken, verifyUser, aiController.submitFeedback);
 
 // Admin routes

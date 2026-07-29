@@ -54,6 +54,7 @@ FORMATTING (the app renders Markdown, so use it to make answers scannable):
  *
  * @param {Object} params
  * @param {string} params.userId - MongoDB ObjectId string
+ * @param {string} params.sessionId - Chat session to read history from and append to
  * @param {string} params.userRole - 'Individual' | 'Bussiness' | 'Expert'
  * @param {string} params.query - The user's message
  * @param {Function} params.onChunk - Called with each streamed text chunk
@@ -62,7 +63,7 @@ FORMATTING (the app renders Markdown, so use it to make answers scannable):
  *   communities, posts) referenced in the answer, for rendering tappable cards
  * @param {Function} params.onError - Called with an Error object on failure
  */
-async function streamAIResponse({ userId, userRole, query, onChunk, onDone, onError }) {
+async function streamAIResponse({ userId, sessionId, userRole, query, onChunk, onDone, onError }) {
   const startTime = Date.now();
   let fullResponse = '';
   let dbResultsCount = 0;
@@ -74,7 +75,7 @@ async function streamAIResponse({ userId, userRole, query, onChunk, onDone, onEr
 
     // Fetch all context in parallel — none of these should block the others
     const [history, businesses, experts, communities, posts, ragResult] = await Promise.all([
-      getChatHistory(userId),
+      getChatHistory(userId, sessionId),
       searchBusinesses(query),
       searchExperts(query),
       searchCommunities(query),
@@ -128,8 +129,8 @@ async function streamAIResponse({ userId, userRole, query, onChunk, onDone, onEr
       try {
         // Persist conversation (entities saved on the assistant turn so a
         // history reload can re-render the same suggestion cards)
-        await appendMessage(userId, 'user', query);
-        await appendMessage(userId, 'assistant', fullResponse, entities);
+        await appendMessage(userId, sessionId, 'user', query);
+        await appendMessage(userId, sessionId, 'assistant', fullResponse, entities);
 
         // Log query for analytics
         await AIQueryLog.create({
