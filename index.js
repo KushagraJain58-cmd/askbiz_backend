@@ -10,6 +10,7 @@ const router = require('./src/routes');
 const config = require('./utils/config').config;
 const errorMiddleware = require('./src/middelwares/error');
 const { socketUtiles } = require("./socket");
+const { registerAIHandlers } = require("./aiSocket");
 const jwt = require("jsonwebtoken");
 require("./utils/workers");
 
@@ -82,6 +83,8 @@ io.on("connection", async (socket) => {
     socket.emit("connection-success", { message: "Connected successfully", userId: socket.userId });
 
     socketUtiles(io, socket);
+
+    registerAIHandlers(socket);
 
     socket.on("disconnect", () => {
 
