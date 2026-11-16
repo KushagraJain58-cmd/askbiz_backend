@@ -9,6 +9,11 @@ let Bussiness = require("../../models/users").Bussiness;
 let Expert = require("../../models/users").Expert;
 let generatePin = require("../../../utils/constants/generatePin");
 let transporter = require("../../config/nodemailer");
+const { sendOtpEmail } = require("../../services/otp/sendOtpEmail");
+
+// Phone OTP delivery isn't wired up to an SMS provider yet, so a fixed code
+// is used for now — it's shown on the OTP screen so testing isn't blocked.
+const STATIC_PHONE_OTP = 123456;
 let jwt = require("jsonwebtoken");
 let config = require("../../../utils/config").config;
 let Admin = require("../../models/admin");
@@ -682,7 +687,9 @@ exports.getOTPForVerification = catchAsyncError(async (req, res) => {
 
     let sendTo;
     const emailOtp = generatePin();
-    const phoneOtp = generatePin();
+    // Phone OTP delivery (SMS/Twilio) isn't wired up yet, so it's a fixed
+    // code for now — shown on the OTP screen so testing isn't blocked.
+    const phoneOtp = STATIC_PHONE_OTP;
     const c_Date = new Date();
 
     if (phoneNumber && email) {
@@ -694,75 +701,11 @@ exports.getOTPForVerification = catchAsyncError(async (req, res) => {
     }
 
     if (sendTo === "both" || sendTo === "email") {
-        const mailOptions = {
-            from: "ritik.singh@mobulous.com",
+        await sendOtpEmail({
             to: email,
-            subject: "OTP Verification",
-            html: `
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-              <style>
-                  body {
-                      font-family: Arial, sans-serif;
-                      line-height: 2;
-                      margin: 0;
-                      padding: 0;
-                      background-color: #f8f8f8;
-                  }
-                  .container {
-                      max-width: 600px;
-                      padding: 20px;
-                  }
-                  h1, p {
-                      margin: 0;
-                      padding: 0;
-                  }
-                  a {
-                      color: #007bff;
-                      text-decoration: none;
-                      border-radius: 5px;
-                      display: inline-block;
-                  }
-                  a:hover {
-                      color: #37b7f1;
-                  }
-                  .otp-box {
-                    width: fit-content;
-                    border: 1px solid #ccc;
-                    padding: 10px;
-                    border-radius: 5px;
-                    margin-bottom: 10px;
-                    font-weight: bold;
-                    font-size: 24px;
-                }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <h3>Hi</h3>
-                  <p>We've received a request to reset your password.</p>
-                  <p>If you initiated this request, please use the following OTP within 5 minutes:</p>
-                  <div class="otp-box">${emailOtp}</div>
-                  <p>If you didn't request this, kindly ignore this message.</p>
-                  <p>For assistance, reach us at support@askbizz.com.</p><br>
-                  <p>Best,</p>
-                  <p>The AskBizz Team</p>
-              </div>
-          </body>
-          </html>
-        `,
-        };
-
-        await transporter.sendMail(mailOptions);
-    } else {
-        // Set up Twilio here for sending OTP to phone number
-        // Example for sending OTP via Twilio
-        // const twilioResponse = await twilioClient.messages.create({
-        //   body: `Your OTP is ${phoneOtp}`,
-        //   from: 'YourTwilioNumber',
-        //   to: phoneNumber
-        // });
+            otp: emailOtp,
+            purpose: "verify your email address",
+        });
     }
 
     const otpData = sendTo === "both" ? {

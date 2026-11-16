@@ -6,6 +6,13 @@ exports.config = {
   port: process.env.PORT || 8082,
   mail_email: process.env.MAIL_EMAIL || 'bhadauriaritik@gmail.com',
   mail_password: process.env.MAIL_PASSWORD || "lsfz odtm cedb zzmb",
+
+  // OTP verification email (nodemailer SMTP)
+  smtp_host: process.env.SMTP_HOST || "smtp.gmail.com",
+  smtp_port: parseInt(process.env.SMTP_PORT) || 587,
+  smtp_secure: process.env.SMTP_SECURE === "true",
+  smtp_user: process.env.SMTP_USER || "jainkushagra582@gmail.com",
+  smtp_pass: process.env.SMTP_PASS || "",
   secret_key: process.env.SECRET_KEY || "fdsbdsbsdffsdfdsfgnrkrensf83dsfds",
   REACT_APP_BUCKET_ACCESS_KEY : process.env.REACT_APP_BUCKET_ACCESS || "AKIAQKGGXOAW6QVRXEVJ",
   REACT_APP_BUCKET_SECRET_KEY : process.env.REACT_APP_BUCKET_SECRET || "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",

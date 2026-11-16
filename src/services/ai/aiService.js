@@ -37,7 +37,10 @@ INSTRUCTIONS:
 - If relevant businesses, experts, communities, or posts are shown in the platform data above, mention them naturally by name as people to connect with, communities to join, or posts to check out on AskBiz. Only mention entries that actually appear in the platform data.
 - For government schemes, registrations, and regulations, always specify they apply to India. Include specific scheme names (Udyam, PMEGP, Startup India, etc.) where relevant.
 - Be concise. Avoid unnecessary preamble. Get to the useful information quickly.
-- If the question is outside your knowledge, say so honestly and suggest the user post the question to an AskBiz community.
+- Match response length to question complexity: a factual lookup gets 1-3 sentences; a multi-step process gets a short list. Never pad a short answer with a header, intro, or closing summary.
+- Do not restate the user's question before answering.
+- Do not end with "Let me know if you have other questions" or similar filler.
+- If the platform data or knowledge base context above does not contain the answer, say exactly "I don't have verified information on that" and suggest the user post the question to an AskBiz community, rather than guessing.
 - Never make up business names, phone numbers, prices, or regulatory details you are not certain about.
 - Always prioritise accuracy over appearing knowledgeable.
 
@@ -83,13 +86,6 @@ async function streamAIResponse({ userId, sessionId, userRole, query, onChunk, o
       searchRAG(query),
     ]);
 
-    console.log("history",history)
-    console.log("businesses",businesses)
-    console.log("experts",experts)
-    console.log("communities",communities)
-    console.log("posts",posts)
-    console.log("ragResult",ragResult)
-
     dbResultsCount = businesses.length + experts.length + communities.length + posts.length;
     ragResultsCount = ragResult.count;
 
@@ -98,11 +94,7 @@ async function streamAIResponse({ userId, sessionId, userRole, query, onChunk, o
     // Structured, client-safe copies of the same records for tappable cards
     const entities = buildEntityPayload({ businesses, experts, communities, posts });
 
-    console.log("dbContext",dbContext)
-
     const systemPrompt = buildSystemPrompt(dbContext, ragResult.context, userRole);
-
-    console.log("systemPrompt",systemPrompt)
 
     const messages = [
       ...history,
@@ -112,6 +104,7 @@ async function streamAIResponse({ userId, sessionId, userRole, query, onChunk, o
     const stream = client.messages.stream({
       model: config.ai_model,
       max_tokens: config.ai_max_tokens,
+      temperature: 0.3,
       system: systemPrompt,
       messages,
     });
